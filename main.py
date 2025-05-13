@@ -3,11 +3,7 @@ from pydantic import BaseModel
 from typing import List
 from providers import (
     local_provider,
-    openai_provider,
-    gemini_provider,
-    #anthropic_provider,
-    #deepseek_provider,
-    #qwen_provider
+    gateway_provider
 )
 from dotenv import load_dotenv
 
@@ -15,8 +11,7 @@ load_dotenv()
 
 EMBEDDERS = {
     "local": local_provider.embedder,
-    "openai": openai_provider.embedder,
-    "gemini": gemini_provider.embedder,
+    "gateway": gateway_provider.embedder,
     #"anthropic": anthropic_provider.embedder,
     #"deepseek": deepseek_provider.embedder,
     #"qwen": qwen_provider.embedder
@@ -51,8 +46,20 @@ def embed_text(request: EmbedRequest):
 def embed_batch(request: BatchEmbedRequest):
     try:
         provider = getattr(request, "provider", "local").lower()
-        embedder = EMBEDDERS.get(provider, local_provider.embedder)
+        embedder = EMBEDDERS.get(provider, local_provider)
+
+        # 👇 Extract llm_provider if gateway was selected
+        llm_provider = getattr(request, "llm_provider", None)
+        if provider == "gateway" and llm_provider:
+            embedder.set_provider(llm_provider)
+
+        print("🔍 [MAIN] Resolved provider:", provider)
+        print("🔍 [MAIN] Using embedder object:", embedder.__class__.__name__)
+
         vectors = embedder.batch_embed(request.texts)
         return {"embeddings": vectors}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
