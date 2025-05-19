@@ -5,6 +5,7 @@ from providers import (
     local_provider,
     gateway_provider
 )
+from providers.router import EmbedderRouter
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,28 +37,25 @@ class BatchEmbedResponse(BaseModel):
 @app.post("/embed", response_model=EmbedResponse)
 def embed_text(request: EmbedRequest):
     try:
-        embedder = EMBEDDERS.get(request.provider.lower(), local_provider.embedder)
-        vector = embedder.embed(request.text)
-        return {"embedding": vector}
+        router = EmbedderRouter(strategy=request.provider)
+        result = router.embed(request.text)
+
+        if isinstance(result, dict):  # case: "both"
+            return {"embedding": result.get("local") or result.get("gateway")}
+        return {"embedding": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/batch_embed", response_model=BatchEmbedResponse)
 def embed_batch(request: BatchEmbedRequest):
     try:
-        provider = getattr(request, "provider", "local").lower()
-        embedder = EMBEDDERS.get(provider, local_provider)
+        router = EmbedderRouter(strategy=request.provider)
+        result = router.batch_embed(request.texts)
 
-        # 👇 Extract llm_provider if gateway was selected
-        llm_provider = getattr(request, "llm_provider", None)
-        if provider == "gateway" and llm_provider:
-            embedder.set_provider(llm_provider)
-
-        print("🔍 [MAIN] Resolved provider:", provider)
-        print("🔍 [MAIN] Using embedder object:", embedder.__class__.__name__)
-
-        vectors = embedder.batch_embed(request.texts)
-        return {"embeddings": vectors}
+        if isinstance(result, dict):  # strategy="both"
+            return {"embeddings": result.get("local") or result.get("gateway")}
+        return {"embeddings": result}
     except Exception as e:
         import traceback
         traceback.print_exc()
