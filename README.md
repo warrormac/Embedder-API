@@ -1,17 +1,18 @@
 # 🧠 Embedder-API
 
-The **Embedder-API** is a lightweight FastAPI service that exposes a REST endpoint for generating semantic embeddings using a local transformer model (e.g., SentenceTransformers). It is designed to be easily integrated into larger systems like Fast-S3Data, Milvus, or other document pipelines.
+The **Embedder-API** is a modular FastAPI service for generating semantic embeddings. It supports local models, remote APIs via a self-hosted gateway, or both concurrently, with batch processing and fallback logic. Built to plug into larger document pipelines like Fast-S3Data or any vector database workflow.
 
 ---
 
 ## 🚀 Features
 
-- Accepts text or a list of texts via API
-- Supports multiple providers: local, OpenAI, Gemini
-- Returns vector embeddings (e.g., 384-dim)
-- Runs locally — or via cloud APIs if configured
-- Designed to support GPU acceleration (if hardware is available)
-- Easy integration with CLI tools or pipelines (e.g., Fast-S3Data)
+- Accepts single or batch input via `/embed` and `/batch_embed`
+- Provider selection: `local`, `gateway`, or `both`
+- Dual-path fallback with status feedback when using `both`
+- Full support for OpenAI, Gemini via LLM-Gateway
+- Unified `EmbedderInterface` with `.embed()` and `.batch_embed()` methods
+- Works out-of-the-box with Fast-S3Data CLI
+- GPU acceleration supported (if available)
 
 ---
 
@@ -88,29 +89,31 @@ If no provider is specified, it defaults to `"local"`.
 
 ```bash
 Embedder-API/
-├── main.py                      # FastAPI app (routes for /embed, /batch_embed)
-├── config.py                    # Placeholder for central config
-├── model_loader.py              # SentenceTransformer loader
+├── main.py                      # FastAPI app
+├── config.py                    # Central config
+├── model_loader.py              # Local model handler
 ├── .env                         # API keys
 ├── requirements.txt
 └── providers/
     ├── base.py                  # EmbedderInterface
-    ├── local_provider.py        # Local model (MiniLM)
-    ├── openai_provider.py       # OpenAI embeddings
+    ├── local_provider.py        # Local model (e.g., MiniLM)
+    ├── gateway_provider.py      # LLM-Gateway handler
+    ├── openai_provider.py       # OpenAI direct API
     ├── gemini_provider.py       # Gemini embeddings
     ├── anthropic_provider.py    # [placeholder]
     ├── deepseek_provider.py     # [placeholder]
-    └── qwen_provider.py         # [placeholder]
+    └── router.py                # Dynamic routing logic
 ```
 
 ---
 
-## ✅ Current Functionality
+## ✅ Capabilities Summary
 
-- Dynamic provider selection from Fast-S3Data CLI
-- Fully supports: `local`, `openai`, `gemini`
-- Standardized interface with `.embed()` and `.batch_embed()` methods
-- CLI prompts user for embedder (no code changes required)
+- Provider options: `local`, `gateway`, `both`
+- Full batch support: `batch_embed()`
+- Resilient fallback logic in `"both"` mode
+- Plug-and-play CLI integration
+- FastAPI, async-ready, modular
 
 ---
 
@@ -141,17 +144,6 @@ Embedder-API/
 - Add loaders for GGUF, HuggingFace, Torch models
 - Enable users to register their own local models
 - Abstract path-to-model config mapping
-
----
-## 🛠️ Left TODO
-
-- Add OpenRouter / LLM-Gateway support (Phase 2)
-- Add fallback for malformed/empty files
-- Secure Embedder-API with API keys
-- Expand local model support (e.g. Qwen, DeepSeek)
-- Dockerize and deploy via Lambda/S3 trigger
-- Add `/health` and logging endpoints
-- Multi-tenant support and provider routing policies
 
 ---
 
