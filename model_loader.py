@@ -1,8 +1,11 @@
 from sentence_transformers import SentenceTransformer
 import os
+import torch
 from dotenv import load_dotenv
 
 load_dotenv()
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # all-MiniLM-L6-v2 is back up plan if EMBEDDER_MODEL fails
 model_choice = os.getenv("EMBEDDER_MODEL", "all-MiniLM-L6-v2")
